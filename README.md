@@ -7,5 +7,5 @@ To install from GitHub, use
 
     install.packages('devtools')
     library(devtools)
-    install_github('BOPR', 'haven-jeon')
+    install_github('haven-jeon/BOPR')
 
