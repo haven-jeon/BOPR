@@ -23,6 +23,7 @@
 #'   \item{A16}{1,-1 ; class}
 #' }
 #' @source \url{https://archive.ics.uci.edu/ml/datasets/Credit+Approval}
+#' @export
 credit_approval <-
 structure(list(A1 = c("b", "a", "a", "b", "b", "b", "b", "a",
 "b", "b", "b", "b", "a", "b", "a", "b", "b", "a", "b", "a", "b",

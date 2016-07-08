@@ -1,10 +1,10 @@
 Package: BOPR
 Type: Package
-Title: Bayesian online learning scheme for probit regression
-Version: 0.1.0
+Title: Bayesian online learning scheme for probit regression with R
+Version: 0.0.1
 Author: Heewon Jeon
 Maintainer: Heewon Jeon <madjakarta@gmail.com>
-Description: Bayesian online learning scheme for probit regression
+Description: R implementation of Bayesian online learning algorithm with Probit Regression.
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 5.0.1

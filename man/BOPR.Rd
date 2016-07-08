@@ -2,12 +2,22 @@
 % Please edit documentation in R/bopr.R
 \name{BOPR}
 \alias{BOPR}
+\alias{BOPR.default}
+\alias{BOPR.formula}
 \title{BOPR}
 \usage{
 BOPR(x, ...)
+
+\method{BOPR}{default}(x, y, beta = 0.05, prior_prob = 0.5,
+  epsilon = 0.05, subset = NULL, ...)
+
+\method{BOPR}{formula}(formula, data, subset = NULL, na.action = na.pass,
+  beta = 0.05, prior_prob = 0.5, epsilon = 0.05, ...)
 }
 \arguments{
 \item{x}{a  matrix of predictors.}
+
+\item{...}{not used}
 
 \item{y}{a factor vector with 2 level}
 
@@ -17,11 +27,11 @@ BOPR(x, ...)
 
 \item{epsilon}{parameter to apply dynamics}
 
+\item{subset}{optional expression saying that only a subset of the rows of the data should be used in the fit.(currently it's not working.)}
+
 \item{formula}{an optional data frame in which to interpret the variables named in the formula.}
 
 \item{data}{an optional data frame in which to interpret the variables named in the formula.}
-
-\item{subset}{optional expression saying that only a subset of the rows of the data should be used in the fit.(currently it's not working.)}
 
 \item{na.action}{a function which indicates what should happen when the data contain \code{NA}s.}
 }
@@ -31,15 +41,28 @@ S3 \code{BOPR} object; a list of consisting of
  \item{beta}{scaling parameter}
  \item{prior_prob}{prior of initial parametes}
  \item{epsilon}{parameter to apply dynamics}
+ \item{formula}{formula}
 }
 \description{
 Bayesian online learning scheme for probit regression (BOPR)
 }
+\examples{
+{
+idx  <- sample(1:nrow(credit_approval))
+first_train_set  <- credit_approval[idx[1:200],]
+second_train_set  <- credit_approval[idx[201:400],]
+test_set <- credit_approval[idx[401:690],]
+
+bopr_mdl <- BOPR(A16 ~ A1 + A4 + A5 + A7 + A9 + A10 + A12 + A13 , first_train_set)
+bopr_mdl_up  <- online_leraning(bopr_mdl, second_train_set)
+pred  <- predict(bopr_mdl_up, test_set)
+}
+}
 \author{
-Original Python code by Andred Tulloch, R code and modifications by Heewon Jeon
+Heewon Jeon \email{madjakarta@gmail.com}
 }
 \references{
 Graepel, Thore, et al. "Web-scale bayesian click-through rate prediction for sponsored search advertising in microsoft's bing search engine." Proceedings of the 27th International Conference on Machine Learning (ICML-10). 2010.
-He, X., Bowers, S., Candela, J. Q., Pan, J., Jin, O., Xu, T., … Herbrich, R. (2014). Practical Lessons from Predicting Clicks on Ads at Facebook. Proceedings of 20th ACM SIGKDD Conference on Knowledge Discovery and Data Mining - ADKDD’14, 1–9.
+He, X., Bowers, S., Candela, J. Q., Pan, J., Jin, O., Xu, T.,Herbrich, R. (2014). Practical Lessons from Predicting Clicks on Ads at Facebook. Proceedings of 20th ACM SIGKDD Conference on Knowledge Discovery and Data Mining - ADKDD '14, 1-9.
 }
 

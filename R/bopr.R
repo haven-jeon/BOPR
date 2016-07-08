@@ -2,7 +2,7 @@ pkg.env <- new.env()
 
 pkg.env$MAX_SURPRISE <- 5
 pkg.env$MIN_SURPRISE <- pkg.env$MAX_SURPRISE * -1
-
+pkg.env$PRIOR_VARIANCE <- 1.0
 
 #' BOPR
 #'
@@ -17,19 +17,32 @@ pkg.env$MIN_SURPRISE <- pkg.env$MAX_SURPRISE * -1
 #' @param data an optional data frame in which to interpret the variables named in the formula.
 #' @param subset optional expression saying that only a subset of the rows of the data should be used in the fit.(currently it's not working.)
 #' @param na.action a function which indicates what should happen when the data contain \code{NA}s.
+#' @param ... not used
 #' @return S3 \code{BOPR} object; a list of consisting of
 #'  \item{beta_matrix}{beta matrix with mean and variance}
 #'  \item{beta}{scaling parameter}
 #'  \item{prior_prob}{prior of initial parametes}
 #'  \item{epsilon}{parameter to apply dynamics}
-#' @author Original Python code by Andred Tulloch, R code and modifications by Heewon Jeon
+#'  \item{formula}{formula}
+#' @author Heewon Jeon \email{madjakarta@@gmail.com}
 #' @references Graepel, Thore, et al. "Web-scale bayesian click-through rate prediction for sponsored search advertising in microsoft's bing search engine." Proceedings of the 27th International Conference on Machine Learning (ICML-10). 2010.
-#' He, X., Bowers, S., Candela, J. Q., Pan, J., Jin, O., Xu, T., … Herbrich, R. (2014). Practical Lessons from Predicting Clicks on Ads at Facebook. Proceedings of 20th ACM SIGKDD Conference on Knowledge Discovery and Data Mining - ADKDD’14, 1–9.
-#' @example
+#' He, X., Bowers, S., Candela, J. Q., Pan, J., Jin, O., Xu, T.,Herbrich, R. (2014). Practical Lessons from Predicting Clicks on Ads at Facebook. Proceedings of 20th ACM SIGKDD Conference on Knowledge Discovery and Data Mining - ADKDD '14, 1-9.
+#' @examples
+#' {
+#' idx  <- sample(1:nrow(credit_approval))
+#' first_train_set  <- credit_approval[idx[1:200],]
+#' second_train_set  <- credit_approval[idx[201:400],]
+#' test_set <- credit_approval[idx[401:690],]
+#'
+#' bopr_mdl <- BOPR(A16 ~ A1 + A4 + A5 + A7 + A9 + A10 + A12 + A13 , first_train_set)
+#' bopr_mdl_up  <- online_leraning(bopr_mdl, second_train_set)
+#' pred  <- predict(bopr_mdl_up, test_set)
+#' }
 #' @export
+#' @import stats
 BOPR <- function(x, ...) UseMethod("BOPR")
 
-
+#' @rdname BOPR
 #' @export
 BOPR.default <- function(x, y,
                                 beta=0.05,
@@ -43,7 +56,7 @@ BOPR.default <- function(x, y,
   weight_mat <- matrix(nrow = 2,ncol = num_feat,data = 0, dimnames=list(c("mean", "variance"), colnames(x)))
   bias_mean <- prior_mean(prior_prob, beta, num_feat)
   #added bias mean and variance
-  weight_mat[,seq(1,num_feat)] <- c(bias_mean, 1.0)
+  weight_mat[,seq(1,num_feat)] <- c(bias_mean, pkg.env$PRIOR_VARIANCE)
   if(!is.null(subset) & is.numeric(subset)){
     x <- x[subset,]
     y <- y[subset]
@@ -70,7 +83,7 @@ BOPR.default <- function(x, y,
           mean = as.numeric(weight_mat['mean',j] + mean_delta),
           variance = as.numeric(weight_mat['variance',j] * variance_multiplier))
         #apply dynamics
-        prior <- c(mean=0, variance=1)
+        prior <- c(mean=0, variance=pkg.env$PRIOR_VARIANCE)
         adjusted_variance <- updated['variance'] * prior['variance'] /
         ((1.0 - epsilon) * prior['variance'] +
            epsilon * updated['variance'])
@@ -89,7 +102,7 @@ BOPR.default <- function(x, y,
 
 
 
-
+#' @rdname BOPR
 #' @export
 BOPR.formula <- function(formula, data, subset=NULL, na.action =na.pass, beta=0.05,
                                 prior_prob=0.5,
@@ -123,11 +136,12 @@ BOPR.formula <- function(formula, data, subset=NULL, na.action =na.pass, beta=0.
 
   object <- BOPR.default(x=mdl_mat, y=y, beta=beta, prior_prob=prior_prob,
                       epsilon=epsilon,subset=subset, ...)
+  object$formula <- formula
   return(object)
 }
 
-#' @export
-make_training_data <- function(formula, data, subset=NULL, na.action =na.pass)
+
+.make_training_data <- function(formula, data, subset=NULL, na.action =na.pass)
 {
   Call <- match.call()
 
@@ -171,24 +185,40 @@ make_training_data <- function(formula, data, subset=NULL, na.action =na.pass)
 #'
 #' @return when type = "class", a factor vector is returned. When type = "response", probability is returned.
 #' @export
-#'
-#' @examples
 predict.BOPR <- function(object, newdata = NULL, type = "response", na.action = na.pass, ...){
   if(class(object) != 'BOPR'){
     stop('object is not BOPR class!')
   }
-  if(ncol(newdata) != ncol(object$beta_matrix)){
-    stop('features are not match!')
+  if(any(class(newdata) == 'data.frame')) {
+    variables <- labels(terms(object$formula))
+    newdata_ <- newdata[,variables]
+    character_vars <- lapply(newdata_, class) == "character"
+    newdata_[, character_vars] <- lapply(newdata_[, character_vars], as.factor)
+    mdl_mat <- model.matrix(as.formula(paste("~",paste0(variables, collapse=' + '))),
+              newdata_, contrasts.arg = lapply(newdata_,contrasts, contrasts=FALSE))[,-1]
+    if(!setequal(colnames(object$beta_matrix), colnames(mdl_mat))){
+      inter_params <- intersect(colnames(object$beta_matrix), colnames(mdl_mat))
+      beta_mat     <- object$beta_matrix[,inter_params]
+      newdata.mat  <- mdl_mat[,inter_params]
+    }else{
+      beta_mat <- object$beta_matrix
+      newdata.mat <- mdl_mat
+    }
+  }else if(any(class(newdata) == 'matrix')){
+    newdata.mat <- newdata[,colnames(object$beta_matrix)]
+  }else{
+    stop('newdata must be one of matrix or data.frame!')
   }
-  return(pnorm((newdata %*% object$beta_matrix['mean',])/ (newdata %*% object$beta_matrix['variance',] + object$beta ** 2)))
+
+  return(pnorm((newdata.mat %*% beta_mat['mean',])/(newdata.mat %*% beta_mat['variance',] + object$beta ** 2)))
 }
 
 
 #' Online learning with stream of samples.
 #'
 #' @param object \code{BOPR} object
-#' @param x a  matrix of predictors.
-#' @param y a factor vector with 2 level
+#' @param newdata a data.frame of predictors.
+#' @param allow.new allow new levels of current variable
 #'
 #' @return S3 \code{BOPR} object; a list of consisting of
 #'  \item{beta_matrix}{beta matrix with mean and variance}
@@ -196,13 +226,44 @@ predict.BOPR <- function(object, newdata = NULL, type = "response", na.action = 
 #'  \item{prior_prob}{prior of initial parametes}
 #'  \item{epsilon}{parameter to apply dynamics}
 #' @export
+online_leraning <- function(object, newdata=NULL, allow.new=TRUE){
+  if(!any(class(newdata) == 'data.frame')){
+    stop('newdata must be data.frame!')
+  }
+  res <- .make_training_data(object$formula, data = newdata)
+  return(online_leraning.matrix(object, x=res$x, y=res$y, allow.new=allow.new))
+}
+
+#' Online learning with stream of samples.
 #'
-#' @examples
-online_leraning <- function(object, x = NULL, y=NULL){
+#' @param object \code{BOPR} object
+#' @param x a  matrix of predictors.
+#' @param y a factor vector with 2 level
+#' @param allow.new allow new levels of current variable
+#'
+#' @return S3 \code{BOPR} object; a list of consisting of
+#'  \item{beta_matrix}{beta matrix with mean and variance}
+#'  \item{beta}{scaling parameter}
+#'  \item{prior_prob}{prior of initial parametes}
+#'  \item{epsilon}{parameter to apply dynamics}
+#' @export
+online_leraning.matrix <- function(object, x = NULL, y=NULL, allow.new=TRUE){
   if(class(object) != 'BOPR'){
     stop('object is not BOPR class!')
   }
   y_lab <- ifelse(y == 1, 1, -1)
+
+  #if there is other column in x
+  if(!setequal(colnames(object$beta_matrix), colnames(x))){
+    added_col <- setdiff(colnames(x), colnames(object$beta_matrix))
+    print(sprintf('will added %s features!',length(added_col)))
+    for(nm in added_col){
+      bias_mean <- prior_mean(object$prior_prob, object$beta, ncol(object$beta_matrix) + 1)
+      object$beta_matrix <- cbind(object$beta_matrix, c(mean=bias_mean, variance=pkg.env$PRIOR_VARIANCE))
+      colnames(object$beta_matrix)[ncol(object$beta_matrix)] <- nm
+    }
+  }
+
 
   for(i in 1:nrow(x)){
     total_mean <- sum(object$beta_matrix[1,])
@@ -212,8 +273,8 @@ online_leraning <- function(object, x = NULL, y=NULL){
     v <- dnorm(t) / pnorm(t)
     w <- v * (v + t)
     col_nm <- colnames(x)
-    if(length(col_nm) != ncol(object$beta_matrix))
-      stop("num of features is not match.")
+    #if(length(col_nm) != ncol(object$beta_matrix))
+    #  stop("num of features is not match.")
     for(j in col_nm){
       if(x[i,j] == 0) next
       mean_delta <- y_lab[i] * object$beta_matrix['variance',j] / sqrt(total_variance) * v
