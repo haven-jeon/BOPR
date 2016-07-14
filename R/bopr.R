@@ -28,7 +28,6 @@ pkg.env$PRIOR_VARIANCE <- 1.0
 #' @references Graepel, Thore, et al. "Web-scale bayesian click-through rate prediction for sponsored search advertising in microsoft's bing search engine." Proceedings of the 27th International Conference on Machine Learning (ICML-10). 2010.
 #' He, X., Bowers, S., Candela, J. Q., Pan, J., Jin, O., Xu, T.,Herbrich, R. (2014). Practical Lessons from Predicting Clicks on Ads at Facebook. Proceedings of 20th ACM SIGKDD Conference on Knowledge Discovery and Data Mining - ADKDD '14, 1-9.
 #' @examples
-#' {
 #' idx  <- sample(1:nrow(credit_approval))
 #' first_train_set  <- credit_approval[idx[1:200],]
 #' second_train_set  <- credit_approval[idx[201:400],]
@@ -37,7 +36,6 @@ pkg.env$PRIOR_VARIANCE <- 1.0
 #' bopr_mdl <- BOPR(A16 ~ A1 + A4 + A5 + A7 + A9 + A10 + A12 + A13 , first_train_set)
 #' bopr_mdl_up  <- online_leraning(bopr_mdl, second_train_set)
 #' pred  <- predict(bopr_mdl_up, test_set)
-#' }
 #' @export
 #' @import stats
 BOPR <- function(x, ...) UseMethod("BOPR")

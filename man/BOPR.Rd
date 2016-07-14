@@ -47,7 +47,6 @@ S3 \code{BOPR} object; a list of consisting of
 Bayesian online learning scheme for probit regression (BOPR)
 }
 \examples{
-{
 idx  <- sample(1:nrow(credit_approval))
 first_train_set  <- credit_approval[idx[1:200],]
 second_train_set  <- credit_approval[idx[201:400],]
@@ -56,7 +55,6 @@ test_set <- credit_approval[idx[401:690],]
 bopr_mdl <- BOPR(A16 ~ A1 + A4 + A5 + A7 + A9 + A10 + A12 + A13 , first_train_set)
 bopr_mdl_up  <- online_leraning(bopr_mdl, second_train_set)
 pred  <- predict(bopr_mdl_up, test_set)
-}
 }
 \author{
 Heewon Jeon \email{madjakarta@gmail.com}
